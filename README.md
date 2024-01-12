@@ -4,6 +4,8 @@ usdCornellBox
 Procedurally generated Cornell Box to fit any asset loaded/drag&dropped in the viewer.
 Use it as example for a standalone OpenUSD app or as screensaver 
 
+https://github.com/paoloemilioselva/usdCornellBox/assets/1212607/a7de8ca1-365b-43ac-a1f3-41a33fa55968
+
 Dependencies
 ------------
 
