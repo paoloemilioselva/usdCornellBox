@@ -5,7 +5,6 @@
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>
 
-#include <pxr/base/tf/preprocessorUtils.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/cube.h>
 #include <pxr/usd/usdGeom/mesh.h>
