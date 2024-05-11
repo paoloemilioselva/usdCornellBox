@@ -1,15 +1,153 @@
 ﻿{
   "configurations": [
     {
+      "name": "x64-Release-usd-24.05",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "TARGET_CONFIG",
+          "value": "usd-24.05"
+        },
+        {
+          "name": "BOOST_FROM_USD",
+          "value": "1_82"
+        }
+      ]
+    },
+    {
+      "name": "x64-Release-usd-24.05-embedded",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "TARGET_CONFIG",
+          "value": "usd-24.05"
+        },
+        {
+          "name": "BOOST_FROM_USD",
+          "value": "1_82"
+        },
+        {
+          "name": "USD_EMBEDDED",
+          "value": "True"
+        }
+      ]
+    },
+    {
+      "name": "x64-Release-usd-24.03",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "TARGET_CONFIG",
+          "value": "usd-24.03"
+        },
+        {
+          "name": "BOOST_FROM_USD",
+          "value": "1_82"
+        }
+      ]
+    },
+    {
+      "name": "x64-Release-usd-24.03-embedded",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "TARGET_CONFIG",
+          "value": "usd-24.03"
+        },
+        {
+          "name": "BOOST_FROM_USD",
+          "value": "1_82"
+        },
+        {
+          "name": "USD_EMBEDDED",
+          "value": "True"
+        }
+      ]
+    },
+    {
       "name": "x64-Release-usd-23.11",
       "generator": "Ninja",
       "configurationType": "Release",
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-DTARGET_CONFIG=usd-23.11",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "TARGET_CONFIG",
+          "value": "usd-23.11"
+        },
+        {
+          "name": "BOOST_FROM_USD",
+          "value": "1_78"
+        }
+      ]
+    },
+    {
+      "name": "x64-Release-usd-23.11-embedded",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "TARGET_CONFIG",
+          "value": "usd-23.11"
+        },
+        {
+          "name": "BOOST_FROM_USD",
+          "value": "1_78"
+        },
+        {
+          "name": "USD_EMBEDDED",
+          "value": "True"
+        }
+      ]
+    },
+    {
+      "name": "x64-Release-houdini-20.0.688",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
       "buildCommandArgs": "",
-      "ctestCommandArgs": ""
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "TARGET_CONFIG",
+          "value": "houdini-20.0-688-310"
+        }
+      ]
     }
   ]
 }

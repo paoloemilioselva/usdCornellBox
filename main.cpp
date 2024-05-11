@@ -55,7 +55,7 @@ int currentDelegate = 0;
 int newDelegate = 0;
 
 std::string currentFilename = "";
-std::string newFilename = "";
+std::string newFilename = "./Pieta_A_3D_Tribute_to_Michelangelos_Masterpiece.usdz";
 
 bool rotate = false;
 int angle = 0;
@@ -70,6 +70,7 @@ int fullscreen = -1;
 float eyesHeight = 0.0f;
 float fov = 35.0f;
 
+pxr::GfVec3d cameraPos(0, 0, 0);
 pxr::GfVec3d cameraPivot(0, eyesHeight, 0);
 
 int display_w = WIDTH;
@@ -88,6 +89,8 @@ bool useProxyPurpose = true;
 
 double maxHeight = 1.0;
 double verticalOffset = 0.0;
+
+bool verticallyAligned = false;
 
 void ReadSettings()
 {
@@ -115,6 +118,7 @@ void ReadSettings()
         lightIntensity = jsonRoot["lightIntensity"].asFloat();
         lightExposure = jsonRoot["lightExposure"].asFloat();
         useProxyPurpose = jsonRoot["useProxyPurpose"].asBool();
+        verticallyAligned = jsonRoot["verticallyAligned"].asBool();
 
         newFilename = jsonRoot["newFilename"].asString();
         newDelegate = jsonRoot["newDelegate"].asInt();
@@ -142,6 +146,7 @@ void SaveSettings()
     jsonRoot["useProxyPurpose"] = useProxyPurpose;
     jsonRoot["angle"] = angle;
     jsonRoot["frame"] = frame;
+    jsonRoot["verticallyAligned"] = verticallyAligned;
 
     // NOTE: this takes currentFilename and saves it to newFilename
     //       so that when reading it at startup, it triggers a new
@@ -193,6 +198,8 @@ void PrintHelp()
         << "Available keys:" << std::endl
         << "          P : Toggles animation playback (frame-range from loaded file)" << std::endl
         << "      Space : Toggles rotation" << std::endl
+        << "          R : Reset values" << std::endl
+        << "          V : Toggle vertically aligned" << std::endl
         << "        E/D : +/- 0.1 ceiling light exposure" << std::endl
         << "        I/K : +/- 0.1 ceiling light intensity" << std::endl
         << "        O/L : Offsets bounds vertically in cornell-box" << std::endl
@@ -291,6 +298,19 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     {
         fullscreen++;
         ToggleFullscreen(window);
+    }
+    else if (key == GLFW_KEY_R)
+    {
+        lookAtDistanceMultiplier = 1.0;
+        widthMarginMultiplier = 2.0;
+        heightMarginMultiplier = 2.0;
+        lightIntensity = 1.0f;
+        lightExposure = 1.0f;
+        verticalOffset = 0.0;
+    }
+    else if (key == GLFW_KEY_V && action == GLFW_PRESS)
+    {
+        verticallyAligned = !verticallyAligned;
     }
 }
 
@@ -439,6 +459,13 @@ void CreateOrUpdateCornellBox(pxr::UsdStageRefPtr i_stage)
             pxr::GfVec3f(baseSize, 1.0, bboxSize[1]),
             pxr::GfVec3f(1.0, 1.0, 1.0));
 
+        AddMeshPlane(i_stage, pxr::SdfPath("/cornellBox/whiteFrontPlane"), // behind camera
+            pxr::GfVec3d(cameraPivot[0], cameraPivot[1], cameraPos[2]),
+            pxr::GfVec3f(90, 0.0, 0.0),
+            pxr::GfVec3f(baseSize, 1.0, bboxSize[1]),
+            pxr::GfVec3f(1.0, 1.0, 1.0));
+
+
         AddMeshPlane(i_stage, pxr::SdfPath("/cornellBox/whiteTopPlane"),
             pxr::GfVec3d(cameraPivot[0], cameraPivot[1] + bboxSize[1] / 2.0, cameraPivot[2]),
             pxr::GfVec3f(0.0, 0.0, 0.0),
@@ -471,6 +498,10 @@ void CreateOrUpdateCornellBox(pxr::UsdStageRefPtr i_stage)
     pxr::UsdGeomMesh& whiteBackPlane = pxr::UsdGeomMesh(i_stage->GetPrimAtPath(pxr::SdfPath("/cornellBox/whiteBackPlane")));
     whiteBackPlane.GetTranslateOp().Set(pxr::GfVec3d(cameraPivot[0], cameraPivot[1], cameraPivot[2] - baseSize / 2.0));
     whiteBackPlane.GetScaleOp().Set(pxr::GfVec3f(baseSize, 1.0, bboxSize[1]));
+
+    pxr::UsdGeomMesh& whiteFrontPlane = pxr::UsdGeomMesh(i_stage->GetPrimAtPath(pxr::SdfPath("/cornellBox/whiteFrontPlane")));
+    whiteFrontPlane.GetTranslateOp().Set(pxr::GfVec3d(cameraPivot[0], cameraPivot[1], cameraPos[2]));
+    whiteFrontPlane.GetScaleOp().Set(pxr::GfVec3f(baseSize, 1.0, bboxSize[1]));
 
     pxr::UsdGeomMesh& whiteTopPlane = pxr::UsdGeomMesh(i_stage->GetPrimAtPath(pxr::SdfPath("/cornellBox/whiteTopPlane")));
     whiteTopPlane.GetTranslateOp().Set(pxr::GfVec3d(cameraPivot[0], cameraPivot[1] + bboxSize[1] / 2.0, cameraPivot[2]));
@@ -538,8 +569,6 @@ void AddAreaLight(pxr::UsdStageRefPtr i_stage, pxr::GfMatrix4d& i_matrix)
     light.CreateHeightAttr().Set(50.0f);
     auto& xformOp = light.AddXformOp(pxr::UsdGeomXformOp::TypeTransform);
     xformOp.Set(i_matrix.GetInverse());
-
-    //CHAOS_SCENE_INFO("Light '" << pxr::SdfPath("/arealight" + pxr::TfIntToString(i)).GetString() << "' created");
 }
 
 void AddDomeLight(pxr::UsdStageRefPtr i_stage)
@@ -702,7 +731,10 @@ int main(int argc, char** argv)
             if (p.GetName() == "cornellBox")
                 continue;
             pxr::UsdGeomXform(p).GetRotateYOp(pxr::TfToken("spinning")).Set(float(angle));
-            pxr::UsdGeomXform(p).GetTranslateOp(pxr::TfToken("verticalOffset")).Set(pxr::GfVec3d(0,verticalOffset/maxHeight,0));
+            if( verticallyAligned )
+                pxr::UsdGeomXform(p).GetTranslateOp(pxr::TfToken("verticalOffset")).Set(pxr::GfVec3d(0,(maxHeight/2.0)-bbox_orig.GetRange().GetSize()[1]/2.0, 0));
+            else
+                pxr::UsdGeomXform(p).GetTranslateOp(pxr::TfToken("verticalOffset")).Set(pxr::GfVec3d(0, 0, 0));
         }
 
         cameraTransform.SetIdentity();
@@ -723,7 +755,7 @@ int main(int argc, char** argv)
         frustum.SetPerspective(fovy, aspectRatio, znear, zfar);
         projectionMatrix = frustum.ComputeProjectionMatrix();
         viewMatrix = frustum.ComputeViewMatrix();
-
+        cameraPos = viewMatrix.Transform(pxr::GfVec3d(0, 0, 0));
         //if (!pxr::UsdImagingGLEngine::IsColorCorrectionCapable())
         //    glEnable(GL_FRAMEBUFFER_SRGB_EXT);
 

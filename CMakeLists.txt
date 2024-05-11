@@ -33,19 +33,41 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory( "../glfw" "../glfw" )
 
 # Add OpenUSD
-set(USD_VERSION 23.11)
-set(USD_ROOT "C:\\dev\\usd-${USD_VERSION}" )
-set(USD_ROOT_FOR_BATCH "%CURRENT_FOLDER%usd-${USD_VERSION}")
-include(cmake/FindPixarUsd.cmake)
+if(NOT TARGET_CONFIG)
+    set( TARGET_CONFIG "usd-23.11")
+endif()
+string(REPLACE "-" ";" _t_config ${TARGET_CONFIG})
+list(LENGTH _t_config _t_config_length)
+if(_t_config_length LESS 2)
+    MESSAGE(FATAL_ERROR "Wrong TARGET_CONFIG value " ${TARGET_CONFIG} )
+endif()
+list(GET _t_config 0 _target_name )
+set( USD_LIBS "" )
+if( _target_name MATCHES "houdini" )
+    list(GET _t_config 1 HOUDINI_MAJ_MIN )
+    list(GET _t_config 2 HOUDINI_PATCH )
+    list(GET _t_config 3 HOUDINI_PYTHON_VERSION )
+    set( HOUDINI_VERSION "Houdini ${HOUDINI_MAJ_MIN}.${HOUDINI_PATCH}" )
+    set( HOUDINI_ROOT "C:\\Program Files\\Side Effects Software\\${HOUDINI_VERSION}" )
+elseif( _target_name MATCHES "usd" )
+    list(GET _t_config 1 USD_VERSION )
+    set(USD_ROOT "C:\\dev\\usd-${USD_VERSION}" )
+    set(USD_ROOT_FOR_BATCH ${USD_ROOT})
+    if( USD_EMBEDDED )
+        set(USD_ROOT_FOR_BATCH "%CURRENT_FOLDER%usd-${USD_VERSION}")
+    endif()
+else()
+    MESSAGE(FATAL_ERROR "Invalid target " ${_target_name})
+endif()
 
-# Add TBB
+include(cmake/FindUsd.cmake)
+
 include(cmake/FindTBB.cmake)
 
 add_executable( 
     ${TARGET}
     main.cpp
 )
-
 target_compile_options(
         ${TARGET}
         PRIVATE
@@ -75,14 +97,20 @@ target_link_libraries(
     ${USD_LIBS}
 )
 
-install(DIRECTORY ${USD_ROOT}/bin DESTINATION bin/usd-${USD_VERSION})
-install(DIRECTORY ${USD_ROOT}/include DESTINATION bin/usd-${USD_VERSION})
-install(DIRECTORY ${USD_ROOT}/lib DESTINATION bin/usd-${USD_VERSION})
-install(DIRECTORY ${USD_ROOT}/plugin DESTINATION bin/usd-${USD_VERSION})
-install(DIRECTORY ${USD_ROOT}/share DESTINATION bin/usd-${USD_VERSION})
+if( USD_EMBEDDED )
+    message(STATUS "USD EMBEDDED") 
+    install(DIRECTORY ${USD_ROOT}/bin DESTINATION bin/usd-${USD_VERSION})
+    install(DIRECTORY ${USD_ROOT}/include DESTINATION bin/usd-${USD_VERSION})
+    install(DIRECTORY ${USD_ROOT}/lib DESTINATION bin/usd-${USD_VERSION})
+    install(DIRECTORY ${USD_ROOT}/plugin DESTINATION bin/usd-${USD_VERSION})
+    install(DIRECTORY ${USD_ROOT}/share DESTINATION bin/usd-${USD_VERSION})
+endif()
 
 install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
-install(FILES ${CMAKE_SOURCE_DIR}/plugInfo.json DESTINATION bin/usd-extra/plugin/usd)
+install(FILES ${CMAKE_SOURCE_DIR}/extra_runtime/Pieta_A_3D_Tribute_to_Michelangelos_Masterpiece.usdz DESTINATION bin)
+install(FILES ${CMAKE_SOURCE_DIR}/extra_runtime/plugInfo.json DESTINATION bin/usd-extra/plugin/usd)
 
-configure_file( run_simpleusdview.bat run_simpleusdview.bat )
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/run_simpleusdview.bat DESTINATION bin)
+# Install from binary folder so that the bat file has all env-vars replaced
+# after configure_file call
+configure_file( extra_runtime/launcher.bat extra_runtime/launcher.bat )
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/extra_runtime/launcher.bat DESTINATION bin)
