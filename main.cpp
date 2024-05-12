@@ -36,8 +36,12 @@
 #include <iostream>
 #include <cstdlib>
 
+#include <pointfont.h>
+
 #define WIDTH 1024
 #define HEIGHT 768
+
+PointFont pointFont;
 
 double lookAtDistance = 6.0;
 double lookAtDistanceMultiplier = 1.0;
@@ -87,7 +91,7 @@ pxr::GfBBox3d bbox_orig;
 bool useProxyPurpose = true;
 
 double maxHeight = 1.0;
-double verticalOffset = 0.0;
+bool showHelp = false;
 
 bool verticallyAligned = false;
 
@@ -113,7 +117,6 @@ void ReadSettings()
         lookAtDistanceMultiplier = jsonRoot["lookAtDistanceMultiplier"].asDouble();
         widthMarginMultiplier = jsonRoot["widthMarginMultiplier"].asDouble();
         heightMarginMultiplier = jsonRoot["heightMarginMultiplier"].asDouble();
-        verticalOffset = jsonRoot["verticalOffset"].asDouble();
         lightIntensity = jsonRoot["lightIntensity"].asFloat();
         lightExposure = jsonRoot["lightExposure"].asFloat();
         useProxyPurpose = jsonRoot["useProxyPurpose"].asBool();
@@ -139,7 +142,6 @@ void SaveSettings()
     jsonRoot["lookAtDistanceMultiplier"] = lookAtDistanceMultiplier;
     jsonRoot["widthMarginMultiplier"] = widthMarginMultiplier;
     jsonRoot["heightMarginMultiplier"] = heightMarginMultiplier;
-    jsonRoot["verticalOffset"] = verticalOffset;
     jsonRoot["lightIntensity"] = lightIntensity;
     jsonRoot["lightExposure"] = lightExposure;
     jsonRoot["useProxyPurpose"] = useProxyPurpose;
@@ -181,34 +183,6 @@ void ToggleFullscreen(GLFWwindow* window)
         // this resets window position
         glfwSetWindowMonitor(window, NULL, 200, 200, window_w, window_h, 0);
     }
-}
-
-void PrintHelp()
-{
-    std::cout
-        << "usdCornellBox autogenerates a cornell-box around bounds of drag&dropped usd-file." << std::endl
-        << "All multipliers are affecting input stage bounds, changing size of the cornell-box." << std::endl
-        << "Input stage scale isn't changed, the cornell-box is scaled to fit." << std::endl
-        << "With rotation-enabled, all root-prims are affected by a RotateYOp." << std::endl
-        << "Changing window size will re-fit the cornell-box to always cover the whole area." << std::endl
-        << "Add your custom-plugins in the usd-extra folder to load them (delegates,procedurals,sceneindex,etc)." << std::endl
-        << "Launch it, adjust settings, make it fullscreen, "
-        << "save settings and use it as screensaver rotating your favouring usd model." << std::endl << std::endl
-        << "Available keys:" << std::endl
-        << "          P : Toggles animation playback (frame-range from loaded file)" << std::endl
-        << "      Space : Toggles rotation" << std::endl
-        << "          R : Reset values" << std::endl
-        << "          V : Toggle vertically aligned" << std::endl
-        << "        E/D : +/- 0.1 ceiling light exposure" << std::endl
-        << "        I/K : +/- 0.1 ceiling light intensity" << std::endl
-        << "        O/L : Offsets bounds vertically in cornell-box" << std::endl
-        << "          B : Toggles proxy/render purpose" << std::endl
-        << "          F : Toggles fullscreen (rotating across all monitors)" << std::endl
-        << "        W/S : Changes camera-distance multiplier" << std::endl
-        << "    UP/DOWN : Changes top and bottom bounds margin multiplier" << std::endl
-        << " LEFT/RIGHT : Changes left and right bounds margin multiplier" << std::endl
-        << "        Esc : Quit and save settings" << std::endl << std::endl
-        << "paoloemilioselva@gmail.com for any comment/feedback" << std::endl;
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -281,14 +255,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     {
         widthMarginMultiplier -= 0.1;
     }
-    else if (key == GLFW_KEY_O)
-    {
-        verticalOffset += maxHeight / 10.0;
-    }
-    else if (key == GLFW_KEY_L)
-    {
-        verticalOffset -= maxHeight / 10.0;
-    }
     else if (key == GLFW_KEY_B && action == GLFW_PRESS)
     {
         useProxyPurpose = !useProxyPurpose;
@@ -305,11 +271,14 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         heightMarginMultiplier = 2.0;
         lightIntensity = 1.0f;
         lightExposure = 1.0f;
-        verticalOffset = 0.0;
     }
     else if (key == GLFW_KEY_V && action == GLFW_PRESS)
     {
         verticallyAligned = !verticallyAligned;
+    }
+    else if (key == GLFW_KEY_H && action == GLFW_PRESS)
+    {
+        showHelp = !showHelp;
     }
 }
 
@@ -636,16 +605,8 @@ int main(int argc, char** argv)
     engine.reset(new pxr::UsdImagingGLEngine(
         stage->GetPseudoRoot().GetPath(), excludedPaths));
 
-    PrintHelp();
 
     auto& renderDelegates = engine->GetRendererPlugins();
-    std::cout << "Delegates found (select with corresponding key-number):" << std::endl;
-    for (size_t i = 0; i < renderDelegates.size(); ++i)
-    {
-        std::cout << "[" << i << "] "
-            << engine->GetRendererDisplayName(renderDelegates[i])
-            << " (" << renderDelegates[i] << ")" << std::endl;
-    }
     bool enabled = engine->SetRendererPlugin(renderDelegates[0]);
 
     pxr::GfVec4f clearColor(0.18f, 0.18f, 0.18f, 1.0f);
@@ -719,6 +680,7 @@ int main(int argc, char** argv)
         {
             currentDelegate = newDelegate;
             engine->SetRendererPlugin(renderDelegates[currentDelegate]);
+
         }
 
         CreateOrUpdateCornellBox(stage);
@@ -805,6 +767,71 @@ int main(int argc, char** argv)
             engine->Render(stage->GetPseudoRoot(), renderParams);
         }
         glPopMatrix();
+
+        if (showHelp)
+        {
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            // HUD
+            glDisable(GL_LIGHTING);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glEnable(GL_LINE_SMOOTH);
+            glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glPushMatrix();
+            {
+                glViewport(0, 0, display_w, display_h);
+                glMatrixMode(GL_PROJECTION);
+                glLoadIdentity();
+                glMatrixMode(GL_MODELVIEW);
+                glLoadIdentity();
+
+                // draw text
+                pointFont.reset();
+                pointFont.setPixelSize(1.5f);
+                pointFont.setDisplaySize(display_w, display_h);
+
+                pointFont.drawText("ABOUT");
+                pointFont.drawText("usdCornellBox autogenerates a cornell-box around bounds of drag&dropped usd-file.");
+                pointFont.drawText("All multipliers are affecting input stage bounds, changing size of the cornell-box.");
+                pointFont.drawText("Input stage scale isn't changed, the cornell-box is scaled to fit.");
+                pointFont.drawText("With rotation-enabled, all root-prims are affected by a RotateYOp.");
+                pointFont.drawText("Changing window size will re-fit the cornell-box to always cover the whole area.");
+                pointFont.drawText("Add your custom-plugins in the usd-extra folder to load them (delegates,procedurals,sceneindex,etc).");
+                pointFont.drawText("Launch it, adjust settings, make it fullscreen, ");
+                pointFont.drawText("save settings and use it as screensaver rotating your favouring usd model.");
+                pointFont.drawText("");
+                pointFont.drawText("Available keys:");
+                pointFont.drawText("          P : Toggles animation playback (frame-range from loaded file)");
+                pointFont.drawText("      Space : Toggles rotation");
+                pointFont.drawText("          R : Reset values");
+                pointFont.drawText("          V : Toggle vertically aligned");
+                pointFont.drawText("        E/D : +/- 0.1 ceiling light exposure [" + std::to_string(lightExposure) + "]");
+                pointFont.drawText("        I/K : +/- 0.1 ceiling light intensity [" + std::to_string(lightIntensity) + "]");
+                pointFont.drawText("          B : Toggles proxy/render purpose");
+                pointFont.drawText("          F : Toggles fullscreen (rotating across all monitors)");
+                pointFont.drawText("        W/S : Changes camera-distance multiplier [" + std::to_string(lookAtDistanceMultiplier) + "]");
+                pointFont.drawText("    UP/DOWN : Changes top and bottom bounds margin multiplier [" + std::to_string(heightMarginMultiplier) + "]");
+                pointFont.drawText(" LEFT/RIGHT : Changes left and right bounds margin multiplier [" + std::to_string(widthMarginMultiplier) + "]");
+                pointFont.drawText("        Esc : Quit and save settings");
+                pointFont.drawText("paoloemilioselva@gmail.com for any comment/feedback");
+
+                pointFont.drawText("");
+                pointFont.drawText(std::string("Available Hydra Delegates:"));
+                for (size_t i = 0; i < renderDelegates.size(); ++i)
+                {
+                    std::string currDelegate = "  [" + std::to_string(i) + "] "
+                        + engine->GetRendererDisplayName(renderDelegates[i]);
+
+                    if (currentDelegate == i)
+                        currDelegate += " <-- current";
+
+                    pointFont.drawText(currDelegate);
+                }
+            }
+            glPopMatrix();
+        }
 
         // Keep running
         glfwSwapBuffers(window);

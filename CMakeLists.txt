@@ -32,6 +32,9 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory( "../glfw" "../glfw" )
 
+# Add PointFont
+include_directories( "../pointfont" )
+
 # Add OpenUSD
 if(NOT TARGET_CONFIG)
     set( TARGET_CONFIG "usd-23.11")
@@ -67,6 +70,8 @@ include(cmake/FindTBB.cmake)
 add_executable( 
     ${TARGET}
     main.cpp
+    ../pointfont/pointfont.cc
+    ../pointfont/pointfont.h
 )
 target_compile_options(
         ${TARGET}
