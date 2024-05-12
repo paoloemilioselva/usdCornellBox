@@ -12,6 +12,7 @@ Dependencies
 - `Windows 11`
 - `VisualStudio 2022`
 - `GLFW` from github ( https://github.com/glfw/glfw )
+- `PointFont` from github ( https://github.com/paoloemilioselva/pointfont )
 
 Pixar's OpenUSD configuration embedded:
 - `OpenUSD 23.11` from github ( https://github.com/PixarAnimationStudios/OpenUSD )
