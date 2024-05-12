@@ -599,16 +599,6 @@ int main(int argc, char** argv)
     //
     CreateOrUpdateCornellBox(stage);
 
-    // reset the engine for the newly create stage
-    //
-    pxr::SdfPathVector excludedPaths;
-    engine.reset(new pxr::UsdImagingGLEngine(
-        stage->GetPseudoRoot().GetPath(), excludedPaths));
-
-
-    auto& renderDelegates = engine->GetRendererPlugins();
-    bool enabled = engine->SetRendererPlugin(renderDelegates[0]);
-
     pxr::GfVec4f clearColor(0.18f, 0.18f, 0.18f, 1.0f);
 
     std::vector< pxr::UsdGeomXformOp > ops;
@@ -631,6 +621,18 @@ int main(int argc, char** argv)
         // get full-window size (borders included)
         //
         glfwGetWindowSize(window, &window_w, &window_h);
+
+        // check for engine and build it in the render call
+        //
+        if (!engine)
+        {
+            pxr::SdfPathVector excludedPaths;
+            engine.reset(new pxr::UsdImagingGLEngine(
+                stage->GetPseudoRoot().GetPath(), excludedPaths));
+
+            auto& renderDelegates = engine->GetRendererPlugins();
+            engine->SetRendererPlugin(renderDelegates[currentDelegate]);
+        }
 
         if (currentFilename != newFilename)
         {
@@ -671,16 +673,17 @@ int main(int argc, char** argv)
 
             // reset the engine with the new stage
             //
-            pxr::SdfPathVector excludedPaths;
-            engine.reset(new pxr::UsdImagingGLEngine(
-                stage->GetPseudoRoot().GetPath(), excludedPaths));
+            engine.reset();
         }
+
+        if (!engine)
+            continue;
 
         if (newDelegate != currentDelegate)
         {
             currentDelegate = newDelegate;
+            auto& renderDelegates = engine->GetRendererPlugins();
             engine->SetRendererPlugin(renderDelegates[currentDelegate]);
-
         }
 
         CreateOrUpdateCornellBox(stage);
@@ -717,8 +720,6 @@ int main(int argc, char** argv)
         projectionMatrix = frustum.ComputeProjectionMatrix();
         viewMatrix = frustum.ComputeViewMatrix();
         cameraPos = viewMatrix.Transform(pxr::GfVec3d(0, 0, 0));
-        //if (!pxr::UsdImagingGLEngine::IsColorCorrectionCapable())
-        //    glEnable(GL_FRAMEBUFFER_SRGB_EXT);
 
         glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
         glEnable(GL_DEPTH_TEST);
@@ -793,12 +794,16 @@ int main(int argc, char** argv)
                 pointFont.setDisplaySize(display_w, display_h);
 
                 pointFont.drawText("ABOUT");
+                pointFont.drawText("");
                 pointFont.drawText("usdCornellBox autogenerates a cornell-box around bounds of drag&dropped usd-file.");
+                pointFont.drawText("");
                 pointFont.drawText("All multipliers are affecting input stage bounds, changing size of the cornell-box.");
                 pointFont.drawText("Input stage scale isn't changed, the cornell-box is scaled to fit.");
                 pointFont.drawText("With rotation-enabled, all root-prims are affected by a RotateYOp.");
                 pointFont.drawText("Changing window size will re-fit the cornell-box to always cover the whole area.");
+                pointFont.drawText("");
                 pointFont.drawText("Add your custom-plugins in the usd-extra folder to load them (delegates,procedurals,sceneindex,etc).");
+                pointFont.drawText("");
                 pointFont.drawText("Launch it, adjust settings, make it fullscreen, ");
                 pointFont.drawText("save settings and use it as screensaver rotating your favouring usd model.");
                 pointFont.drawText("");
@@ -819,6 +824,7 @@ int main(int argc, char** argv)
 
                 pointFont.drawText("");
                 pointFont.drawText(std::string("Available Hydra Delegates:"));
+                auto& renderDelegates = engine->GetRendererPlugins();
                 for (size_t i = 0; i < renderDelegates.size(); ++i)
                 {
                     std::string currDelegate = "  [" + std::to_string(i) + "] "
