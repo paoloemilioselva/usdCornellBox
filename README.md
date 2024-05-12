@@ -29,24 +29,30 @@ Pixar's OpenUSD configuration embedded:
 Compiling Pixar's OpenUSD
 -------------------------
 
-After cloning the git repo, using the `x64 Native Tools Prompt from Visual Studio 2022`, cd into its main folder and launch:
+After cloning the git repo, using the `x64 Native Tools Prompt from Visual Studio 2022`, 
+cd into its main folder and launch:
 
 ```
-python build_scripts\build_usd.py "C:\dev\usd-23.11" --embree --openimageio --test --prman --prman-location "C:\Program Files\Pixar\RenderManProServer-25.2"
+python build_scripts\build_usd.py "C:\dev\usd-23.11" --embree --openimageio 
+  --test --prman --prman-location "C:\Program Files\Pixar\RenderManProServer-25.2"
 ```
 
-NOTE: `--prman` and `--prman-location` are only needed if you download `Renderman` and you want to use it as render-delegate in your app
+NOTE: `--prman` and `--prman-location` are only needed if you download `Renderman` 
+and you want to use it as render-delegate in your app
+
 NOTE2: `--test` could be skipped, but it is good to use it there, for future projects
 
 Using Visual Studio 2022 with this project
 ------------------------------------------
 
 Open the folder of this project in Visual Studio.
-The cmake configurations will appear at the top, you can switch between the USD or the Houdini one, adjusting paths to folders if you have different ones.
+The cmake configurations will appear at the top, you can switch between the USD or the Houdini one, 
+adjusting paths to folders if you have different ones.
 
 Build the project via right-click on the `CMakeLists.txt` file and selecting `Build` and then `Install`.
 
-Once installed, you can go in the `out/install/` folder, and the configuration subfolder you installed, and launch `run_simpleusdview.bat`.
+Once installed, you can go in the `out/install/` folder, and the configuration subfolder you installed, 
+and launch `launcher.bat`.
 
 The batch-file is setting up all environments needed to launch your standalone app.
 
