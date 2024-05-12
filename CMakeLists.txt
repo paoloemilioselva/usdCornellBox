@@ -109,6 +109,7 @@ if( USD_EMBEDDED )
     install(DIRECTORY ${USD_ROOT}/lib DESTINATION bin/usd-${USD_VERSION})
     install(DIRECTORY ${USD_ROOT}/plugin DESTINATION bin/usd-${USD_VERSION})
     install(DIRECTORY ${USD_ROOT}/share DESTINATION bin/usd-${USD_VERSION})
+    install(FILES ${Python_RUNTIME_LIBRARY_RELEASE} DESTINATION bin)
 endif()
 
 install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
