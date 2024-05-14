@@ -114,6 +114,7 @@ endif()
 
 install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_SOURCE_DIR}/extra_runtime/Pieta_A_3D_Tribute_to_Michelangelos_Masterpiece.usdz DESTINATION bin)
+install(FILES ${CMAKE_SOURCE_DIR}/extra_runtime/sky_1k.hdr DESTINATION bin)
 install(FILES ${CMAKE_SOURCE_DIR}/extra_runtime/plugInfo.json DESTINATION bin/usd-extra/plugin/usd)
 
 # Install from binary folder so that the bat file has all env-vars replaced
