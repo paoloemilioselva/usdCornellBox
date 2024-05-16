@@ -554,7 +554,7 @@ void CreateOrUpdateCornellBox(pxr::UsdStageRefPtr i_stage)
         pxr::UsdLuxDomeLight& skyDome = pxr::UsdLuxDomeLight::Define(i_stage, pxr::SdfPath("/cornellBox/sky"));
         pxr::UsdLuxLightAPI::Apply(skyDome.GetPrim());
         //skyDome.CreateTextureFormatAttr().Set(pxr::TfToken("latlong"));
-        skyDome.CreateTextureFileAttr().Set(pxr::SdfAssetPath("./sky_1k.hdr"));
+        skyDome.CreateTextureFileAttr().Set(pxr::SdfAssetPath("sky_1k.hdr"));
         skyDome.CreateColorAttr().Set(pxr::GfVec3f(1,1,1));
         skyDome.CreateExposureAttr().Set(settings[IBL_EXPOSURE].value);
         skyDome.GetPrim().SetActive(switches[SKY_DOME].value);
