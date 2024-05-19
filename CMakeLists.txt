@@ -33,7 +33,12 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory( "../glfw" "../glfw" )
 
 # Add PointFont
+add_subdirectory( "../pointfont" "../pointfont" )
 include_directories( "../pointfont" )
+
+# add RapidSettings
+add_subdirectory( "../rapidsettings" "../rapidsettings" )
+include_directories( "../rapidsettings" )
 
 # Add OpenUSD
 if(NOT TARGET_CONFIG)
@@ -70,8 +75,6 @@ include(cmake/FindTBB.cmake)
 add_executable( 
     ${TARGET}
     main.cpp
-    ../pointfont/pointfont.cc
-    ../pointfont/pointfont.h
 )
 target_compile_options(
         ${TARGET}
@@ -99,6 +102,8 @@ target_link_libraries(
     OpenGL::GL
     glfw
     jsoncpp
+    PointFont
+    RapidSettings
     ${USD_LIBS}
 )
 

@@ -40,76 +40,15 @@
 
 #include <pointfont.h>
 
+#include <rapidsettings.h>
+
 #define WIDTH 1024
 #define HEIGHT 768
 
 pxr::UsdStageRefPtr stage;
 
 PointFont pointFont;
-
-#define SETTING_OFF -1
-#define SETTING_IDLE 1
-#define SETTING_ON 2
-
-#define LIGHT_EXPOSURE 0
-#define LIGHT_INTENSITY 1
-#define LOOKAT_DISTANCE_MULTIPLIER 2
-#define MARGIN_WIDTH_MULTIPLIER 3
-#define MARGIN_HEIGHT_MULTIPLIER 4
-#define IBL_EXPOSURE 5
-#define FONT_SIZE 6
-#define FONT_LINE_SPACE 7
-#define CAMERA_DISTANCE_MULTIPLIER 8
-
-#define SKY_DOME 0
-#define CEILING_LIGHT 1
-#define VERTICALLY_ALIGNED 2
-#define PROXY_PURPOSE 3
-#define ROTATE 4
-#define ANIMATE 5
-
-template< typename T >
-struct Setting
-{
-    int status;
-    T value;
-    T defaultValue;
-    T temp;
-    int key = 0;
-    std::string label = "";
-    std::string help = "";
-    Setting(const std::string& i_label, T i_def, int i_key, const std::string& i_help):
-        status(SETTING_OFF),
-        value(i_def),
-        defaultValue(i_def),
-        temp(i_def),
-        key(i_key),
-        label(i_label),
-        help(i_help)
-    {}
-
-    const std::string getHelpText(bool i_switch=false)
-    {
-        std::stringstream output;
-        if (key == GLFW_KEY_SPACE)
-            output << "SPACE";
-        else
-            output << char(key);
-        output << " : " << help;
-        if(i_switch)
-            output << " [" << (value ? "ON" : "OFF") << "]";
-        else
-            output << " [" << value << "]";
-        return output.str();
-    }
-};
-std::vector< Setting<float> > settings;
-std::vector< Setting<bool> > switches;
-
-double mouseClickX = 0.0;
-double mouseClickY = 0.0;
-double mouseX = 0.0;
-double mouseY = 0.0;
+RapidSettings::Settings settings;
 
 double baseSize = 0.0;
 double lookAtDistance = 6.0;
@@ -154,22 +93,23 @@ bool showHelp = false;
 
 void InitSettings()
 {
-    switches.emplace_back(Setting("skyDome", false, GLFW_KEY_L, "Toggle Sky Dome"));
-    switches.emplace_back(Setting("ceilingLight", true, GLFW_KEY_K, "Toggle Ceiling Light"));
-    switches.emplace_back(Setting("verticallyAligned", false, GLFW_KEY_V, "Toggle vertically aligned"));
-    switches.emplace_back(Setting("proxyPurpose", true, GLFW_KEY_B, "Toggles proxy purpose"));
-    switches.emplace_back(Setting("rotate", false, GLFW_KEY_SPACE, "Rotate"));
-    switches.emplace_back(Setting("animate", false, GLFW_KEY_P, "Playback animation"));
+    
+    settings.addSwitch("skyDome", false, GLFW_KEY_L, "Toggle Sky Dome");
+    settings.addSwitch("ceilingLight", true, GLFW_KEY_K, "Toggle Ceiling Light");
+    settings.addSwitch("verticallyAligned", false, GLFW_KEY_V, "Toggle vertically aligned");
+    settings.addSwitch("proxyPurpose", true, GLFW_KEY_B, "Toggles proxy purpose");
+    settings.addSwitch("rotate", false, GLFW_KEY_SPACE, "Rotate");
+    settings.addSwitch("animate", false, GLFW_KEY_P, "Playback animation");
 
-    settings.emplace_back(Setting("lightExposure", 1.0f, GLFW_KEY_E, "Ceiling light exposure"));
-    settings.emplace_back(Setting("lightIntensity", 1.0f, GLFW_KEY_I, "Ceiling light intensity"));
-    settings.emplace_back(Setting("lookAtDistanceMultiplier", 1.0f, GLFW_KEY_W, "CameraTarget Distance multiplier"));
-    settings.emplace_back(Setting("marginWidthMultiplier", 2.0f, GLFW_KEY_Z, "Margin width multiplier"));
-    settings.emplace_back(Setting("marginHeightMultiplier", 2.0f, GLFW_KEY_X, "Margin height multiplier"));
-    settings.emplace_back(Setting("iblExposure", 0.0f, GLFW_KEY_T, "Sky Dome Exposure"));
-    settings.emplace_back(Setting("fontSize", 1.0f, GLFW_KEY_J, "Font size"));
-    settings.emplace_back(Setting("fontLineSpace", 1.5f, GLFW_KEY_G, "Font line space"));
-    settings.emplace_back(Setting("cameraDistanceMultiplier", 0.0f, GLFW_KEY_A, "Camera Distance Multiplier"));
+    settings.addFloat("lightExposure", 1.0f, GLFW_KEY_E, "Ceiling light exposure");
+    settings.addFloat("lightIntensity", 1.0f, GLFW_KEY_I, "Ceiling light intensity");
+    settings.addFloat("lookAtDistanceMultiplier", 1.0f, GLFW_KEY_W, "CameraTarget Distance multiplier");
+    settings.addFloat("marginWidthMultiplier", 2.0f, GLFW_KEY_Z, "Margin width multiplier");
+    settings.addFloat("marginHeightMultiplier", 2.0f, GLFW_KEY_X, "Margin height multiplier");
+    settings.addFloat("skyExposure", 0.0f, GLFW_KEY_T, "Sky Dome Exposure");
+    settings.addFloat("fontSize", 1.0f, GLFW_KEY_J, "Font size");
+    settings.addFloat("fontLineSpace", 1.5f, GLFW_KEY_G, "Font line space");
+    settings.addFloat("cameraDistanceMultiplier", 0.0f, GLFW_KEY_A, "Camera Distance Multiplier");
 }
 
 void ReadSettings()
@@ -190,17 +130,7 @@ void ReadSettings()
         angle = jsonRoot["angle"].asInt();
         frame = jsonRoot["frame"].asInt();
 
-        for (int i = 0; i < settings.size(); ++i)
-        {
-            settings[i].status = SETTING_OFF;
-            settings[i].value = jsonRoot[settings[i].label].asFloat();
-        }
-
-        for (int i = 0; i < switches.size(); ++i)
-        {
-            switches[i].status = SETTING_OFF;
-            switches[i].value = jsonRoot[switches[i].label].asBool();
-        }
+        settings.InitializeFromJson(jsonRoot);
 
         newFilename = jsonRoot["newFilename"].asString();
         newDelegate = jsonRoot["newDelegate"].asInt();
@@ -218,15 +148,7 @@ void SaveSettings()
     jsonRoot["window_pos_y"] = window_pos_y;
     jsonRoot["fullscreen"] = fullscreen;
 
-    for (int i = 0; i < settings.size(); ++i)
-    {
-        jsonRoot[settings[i].label] = settings[i].value;
-    }
-
-    for (int i = 0; i < switches.size(); ++i)
-    {
-        jsonRoot[switches[i].label] = switches[i].value;
-    }
+    settings.PopulateJson(jsonRoot);
 
     jsonRoot["angle"] = angle;
     jsonRoot["frame"] = frame;
@@ -297,14 +219,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     }
     else if (key == GLFW_KEY_R)
     {
-        for (int i = 0; i < switches.size(); ++i)
-        {
-            switches[i].value = switches[i].defaultValue;
-        }
-        for (int i = 0; i < settings.size(); ++i)
-        {
-            settings[i].value = settings[i].defaultValue;
-        }
+        settings.ResetToDefaults();
     }
     else if (key == GLFW_KEY_H && action == GLFW_PRESS)
     {
@@ -315,23 +230,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         stage->GetRootLayer()->Export("./temp.usda");
     }
 
-    for (int i = 0; i < settings.size(); ++i)
-    {
-        if (key == settings[i].key && action == GLFW_PRESS)
-        {
-            settings[i].status *= -1;
-            break;
-        }
-    }
-
-    for (int i = 0; i < switches.size(); ++i)
-    {
-        if (key == switches[i].key && action == GLFW_PRESS)
-        {
-            switches[i].value = !switches[i].value;
-            break;
-        }
-    }
+    settings.KeyPressed(key, action);
 }
 
 void drop_callback(GLFWwindow* window, int count, const char** paths)
@@ -349,40 +248,14 @@ void mouse_button_callback(
     GLFWwindow* window,
     int button, int action, int mods)
 {
-    for (int i = 0; i < settings.size(); ++i)
-    {
-        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-        {
-            if (settings[i].status == SETTING_IDLE)
-            {
-                mouseClickX = mouseX;
-                mouseClickY = mouseY;
-                settings[i].temp = settings[i].value;
-                settings[i].status = SETTING_ON;
-            }
-        }
-        else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE && settings[i].status == SETTING_ON)
-        {
-            settings[i].status = SETTING_IDLE;
-            mouseClickX = mouseX;
-            mouseClickY = mouseY;
-        }
-    }
+    settings.MousePressed(button, action);
 }
 
 void mouse_cursor_callback(
     GLFWwindow* window,
     double xpos, double ypos)
 {
-    mouseX = xpos;
-    mouseY = ypos;
-    for (int i = 0; i < settings.size(); ++i)
-    {
-        if (settings[i].status == SETTING_ON)
-        {
-            settings[i].value = settings[i].temp + 2.0f*float(mouseX-mouseClickX)/float(display_w);
-        }
-    }
+    settings.MouseMoved(xpos, ypos);
 }
 
 void AddMeshPlane(
@@ -465,8 +338,8 @@ void CreateOrUpdateCornellBox(pxr::UsdStageRefPtr i_stage)
     }
     maxHeight = std::max(maxWidth, max_orig[1] - min_orig[1]);
     // scale bbox to leave margins
-    maxWidth *= double(settings[MARGIN_WIDTH_MULTIPLIER].value);
-    maxHeight *= double(settings[MARGIN_HEIGHT_MULTIPLIER].value);
+    maxWidth *= double(settings.getFloat("marginWidthMultiplier"));
+    maxHeight *= double(settings.getFloat("marginHeightMultiplier"));
 
     pxr::GfVec3d newMin = pxr::GfVec3d(-maxWidth, min_orig[1], -maxWidth);
     pxr::GfVec3d newMax = pxr::GfVec3d(maxWidth, min_orig[1] + maxHeight, maxWidth);
@@ -489,7 +362,7 @@ void CreateOrUpdateCornellBox(pxr::UsdStageRefPtr i_stage)
     pxr::GfVec3d bboxSize = bbox.ComputeAlignedRange().GetSize();
     baseSize = std::max(bboxSize[0], bboxSize[2]);
     cameraPivot = bbox.ComputeCentroid();
-    lookAtDistance = bboxSize.GetLength()*2.0*double(settings[LOOKAT_DISTANCE_MULTIPLIER].value);
+    lookAtDistance = bboxSize.GetLength()*2.0*double(settings.getFloat("lookAtDistanceMultiplier"));
     fov = float( 2.0 * std::atan(bboxSize[1] * 0.5 / lookAtDistance) * 180.0/M_PI );
     offsetX = 0.0;
     offsetY = 0.0;
@@ -542,13 +415,13 @@ void CreateOrUpdateCornellBox(pxr::UsdStageRefPtr i_stage)
 
         pxr::UsdLuxRectLight& light = pxr::UsdLuxRectLight::Define(i_stage, pxr::SdfPath("/cornellBox/ceilingLight"));
         pxr::UsdLuxLightAPI::Apply(light.GetPrim());
-        light.CreateExposureAttr().Set(settings[LIGHT_EXPOSURE].value);
-        light.CreateIntensityAttr().Set(settings[LIGHT_INTENSITY].value);
+        light.CreateExposureAttr().Set(settings.getFloat("lightExposure"));
+        light.CreateIntensityAttr().Set(settings.getFloat("lightIntensity"));
         light.CreateWidthAttr().Set(float(baseSize / 5.0));
         light.CreateHeightAttr().Set(float(baseSize / 5.0));
         light.AddTranslateOp().Set(pxr::GfVec3d(cameraPivot[0], cameraPivot[1] + (bboxSize[1] / 2.0) - 0.0001, cameraPivot[2]));
         light.AddRotateXOp().Set(-90.0f);
-        light.GetPrim().SetActive(switches[CEILING_LIGHT].value);
+        light.GetPrim().SetActive(settings.getSwitch("ceilingLight"));
 
         // TODO: need to find a way to add a schema LightAPI
         pxr::UsdLuxDomeLight& skyDome = pxr::UsdLuxDomeLight::Define(i_stage, pxr::SdfPath("/cornellBox/sky"));
@@ -556,8 +429,8 @@ void CreateOrUpdateCornellBox(pxr::UsdStageRefPtr i_stage)
         //skyDome.CreateTextureFormatAttr().Set(pxr::TfToken("latlong"));
         skyDome.CreateTextureFileAttr().Set(pxr::SdfAssetPath("sky_1k.hdr"));
         skyDome.CreateColorAttr().Set(pxr::GfVec3f(1,1,1));
-        skyDome.CreateExposureAttr().Set(settings[IBL_EXPOSURE].value);
-        skyDome.GetPrim().SetActive(switches[SKY_DOME].value);
+        skyDome.CreateExposureAttr().Set(settings.getFloat("skyExposure"));
+        skyDome.GetPrim().SetActive(settings.getSwitch("skyDome"));
     }
 
     pxr::UsdGeomMesh& redPlane = pxr::UsdGeomMesh( i_stage->GetPrimAtPath(pxr::SdfPath("/cornellBox/redPlane")) );
@@ -585,18 +458,18 @@ void CreateOrUpdateCornellBox(pxr::UsdStageRefPtr i_stage)
     whiteBottomPlane.GetScaleOp().Set(pxr::GfVec3f(baseSize, 1.0, baseSize));
 
     pxr::UsdLuxRectLight& light = pxr::UsdLuxRectLight(i_stage->GetPrimAtPath(pxr::SdfPath("/cornellBox/ceilingLight")));
-    light.GetExposureAttr().Set(settings[LIGHT_EXPOSURE].value);
-    light.GetIntensityAttr().Set(settings[LIGHT_INTENSITY].value);
+    light.GetExposureAttr().Set(settings.getFloat("lightExposure"));
+    light.GetIntensityAttr().Set(settings.getFloat("lightIntensity"));
     light.GetWidthAttr().Set(float(baseSize / 5.0));
     light.GetHeightAttr().Set(float(baseSize / 5.0));
     light.GetTranslateOp().Set(pxr::GfVec3d(cameraPivot[0], cameraPivot[1] + (bboxSize[1] / 2.0) - 0.0001, cameraPivot[2]));
-    if (light.GetPrim().IsActive() != switches[CEILING_LIGHT].value)
-        light.GetPrim().SetActive(switches[CEILING_LIGHT].value);
+    if (light.GetPrim().IsActive() != settings.getSwitch("ceilingLight"))
+        light.GetPrim().SetActive(settings.getSwitch("ceilingLight"));
 
     pxr::UsdLuxDomeLight& skyDome = pxr::UsdLuxDomeLight(i_stage->GetPrimAtPath(pxr::SdfPath("/cornellBox/sky")));
-    skyDome.GetExposureAttr().Set(settings[IBL_EXPOSURE].value);
-    if( skyDome.GetPrim().IsActive() != switches[SKY_DOME].value)
-        skyDome.GetPrim().SetActive(switches[SKY_DOME].value);
+    skyDome.GetExposureAttr().Set(settings.getFloat("skyExposure"));
+    if( skyDome.GetPrim().IsActive() != settings.getSwitch("skyDome"))
+        skyDome.GetPrim().SetActive(settings.getSwitch("skyDome"));
 }
 
 void AddMeshCube(pxr::UsdStageRefPtr i_stage, pxr::SdfPath& i_path, pxr::GfVec3d& i_pos)
@@ -697,9 +570,9 @@ int main(int argc, char** argv)
 
     while (!glfwWindowShouldClose(window))
     {
-        if (switches[ANIMATE].value)
+        if (settings.getSwitch("animate"))
             frame = frame > frameEnd ? frameStart : frame + 1;
-        if (switches[ROTATE].value)
+        if (settings.getSwitch("rotate"))
             angle++;
 
         glfwMakeContextCurrent(window);
@@ -709,6 +582,8 @@ int main(int argc, char** argv)
         // get display size (inner display buffer)
         //
         glfwGetFramebufferSize(window, &display_w, &display_h);
+
+        settings.UpdateDisplaySize(display_w, display_h);
 
         // get full-window size (borders included)
         //
@@ -787,14 +662,14 @@ int main(int argc, char** argv)
             if (p.GetName() == "cornellBox")
                 continue;
             pxr::UsdGeomXform(p).GetRotateYOp(pxr::TfToken("spinning")).Set(float(angle));
-            if( switches[VERTICALLY_ALIGNED].value)
+            if(settings.getSwitch("verticallyAligned"))
                 pxr::UsdGeomXform(p).GetTranslateOp(pxr::TfToken("verticalOffset")).Set(pxr::GfVec3d(0,(maxHeight/2.0)-bbox_orig.GetRange().GetSize()[1]/2.0, 0));
             else
                 pxr::UsdGeomXform(p).GetTranslateOp(pxr::TfToken("verticalOffset")).Set(pxr::GfVec3d(0, 0, 0));
         }
 
         cameraTransform.SetIdentity();
-        cameraTransform *= pxr::GfMatrix4d().SetTranslate(pxr::GfVec3d(-offsetX, -offsetY, baseSize*settings[CAMERA_DISTANCE_MULTIPLIER].value));
+        cameraTransform *= pxr::GfMatrix4d().SetTranslate(pxr::GfVec3d(-offsetX, -offsetY, baseSize*settings.getFloat("cameraDistanceMultiplier")));
         cameraTransform *= pxr::GfMatrix4d().SetTranslate(pxr::GfVec3d(0, 0, lookAtDistance));
         cameraTransform *= pxr::GfMatrix4d().SetRotate(pxr::GfRotation(pxr::GfVec3d(0, 0, 1), -rollX * 5.0));
         cameraTransform *= pxr::GfMatrix4d().SetRotate(pxr::GfRotation(pxr::GfVec3d(1, 0, 0), -yaw * 5.0));
@@ -843,8 +718,8 @@ int main(int argc, char** argv)
             renderParams.enableSceneLights = true;
             renderParams.enableSceneMaterials = true;
             renderParams.cullStyle = pxr::UsdImagingGLCullStyle::CULL_STYLE_BACK;
-            renderParams.showProxy = switches[PROXY_PURPOSE].value;
-            renderParams.showRender = !switches[PROXY_PURPOSE].value;
+            renderParams.showProxy = settings.getSwitch("proxyPurpose");
+            renderParams.showRender = !settings.getSwitch("proxyPurpose");
             renderParams.showGuides = false;
             renderParams.forceRefresh = false;
             renderParams.highlight = false;
@@ -882,8 +757,8 @@ int main(int argc, char** argv)
 
                 // draw text
                 pointFont.reset();
-                pointFont.setLineSpace(settings[FONT_LINE_SPACE].value);
-                pointFont.setPixelSize(settings[FONT_SIZE].value);
+                pointFont.setLineSpace(settings.getFloat("fontLineSpace"));
+                pointFont.setPixelSize(settings.getFloat("fontSize"));
                 pointFont.setDisplaySize(display_w, display_h);
 
                 pointFont.drawText("ABOUT");
@@ -903,13 +778,13 @@ int main(int argc, char** argv)
                 pointFont.drawText("Available keys:");
                 pointFont.drawText("          R : Reset values");
                 pointFont.drawText("          F : Toggles fullscreen (rotating across all monitors)");
-                for (int i = 0; i < switches.size(); ++i)
+                for (RapidSettings::SettingsSwitches::iterator it = settings.getSwitches().begin(); it != settings.getSwitches().end(); ++it)
                 {
-                    pointFont.drawText(std::string("          ") + switches[i].getHelpText(true));
+                    pointFont.drawText(std::string("          ") + it->second.getHelpText(true));
                 }
-                for (int i = 0; i < settings.size(); ++i)
+                for (RapidSettings::SettingsFloats::iterator it = settings.getFloats().begin(); it != settings.getFloats().end(); ++it)
                 {
-                    pointFont.drawText(std::string("          ") + settings[i].getHelpText(), settings[i].status > 0);
+                    pointFont.drawText(std::string("          ") + it->second.getHelpText(), it->second.status > 0);
                 }
                 pointFont.drawText("          D : Save current scene to ./temp.usda");
                 pointFont.drawText("        Esc : Quit and save settings");
