@@ -195,7 +195,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
     {
         glfwGetWindowPos(window, &window_pos_x, &window_pos_y);
         SaveSettings();
-        stage->GetRootLayer()->Export("./temp.usda");
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 
